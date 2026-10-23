@@ -1,27 +1,97 @@
 {% extends "base.html" %}
 {% block content %}
 <h1>Предпросмотр результата</h1>
-<p>Проверьте распознанный JSON и подтвердите.</p>
+<p>Проверьте распознанные данные и подтвердите.</p>
 
-<div class="preview-grid">
-  <div>
-    <h2>Структура</h2>
-    <p><b>Тип:</b> {{ doc.doc_type.value }}</p>
-    <p><b>Номер:</b> {{ doc.header.number or "—" }} &nbsp; <b>Дата:</b> {{ doc.header.date or "—" }}</p>
-    <p><b>Строк:</b> {{ doc.rows|length }}</p>
+<div>
+  <h2>Шапка документа</h2>
+  <table class="doc-table kv">
+    <tr><th>Тип документа</th><td>{{ doc.doc_type.value }}</td></tr>
+    <tr><th>Код формы</th><td>{{ dash(doc.header.form_code) }}</td></tr>
+    <tr><th>Номер</th><td>{{ dash(doc.header.number) }}</td></tr>
+    <tr><th>Дата</th><td>{{ dash(doc.header.date) }}</td></tr>
+    <tr><th>Грузоотправитель</th><td>{{ dash(doc.header.consignor) }}</td></tr>
+    <tr><th>Грузополучатель</th><td>{{ dash(doc.header.consignee) }}</td></tr>
+    <tr><th>Поставщик</th><td>{{ dash(doc.header.supplier) }}</td></tr>
+    <tr><th>Плательщик</th><td>{{ dash(doc.header.payer) }}</td></tr>
+    <tr><th>Основание</th><td>{{ dash(doc.header.basis) }}</td></tr>
+    <tr><th>Сумма прописью</th><td>{{ dash(doc.header.total_in_words) }}</td></tr>
+  </table>
+  
+  <h2>Товарные позиции</h2>
+  <div class="table-wrap">
+    <table class="doc-table">
+      <thead>
+        <tr>
+          <th>№</th><th>Наименование</th><th>Код</th><th>Штрихкод</th>
+          <th>Ед. изм.</th><th>ОКЕИ</th><th>Кол-во</th><th>Масса нетто</th>
+          <th>Цена</th><th>Сумма без НДС</th><th>НДС, %</th>
+          <th>Сумма НДС</th><th>Сумма с НДС</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in doc.rows %}
+        <tr>
+          <td>{{ r.line_no if r.line_no is not none else loop.index }}</td>
+          <td>{{ r.name }}</td>
+          <td>{{ dash(r.code) }}</td>
+          <td>{{ dash(r.barcode) }}</td>
+          <td>{{ dash(r.unit) }}</td>
+          <td>{{ dash(r.okei) }}</td>
+          <td class="num">{{ dash(r.qty) }}</td>
+          <td class="num">{{ dash(r.netto) }}</td>
+          <td class="num">{{ dash(r.price) }}</td>
+          <td class="num">{{ dash(r.sum_without_vat) }}</td>
+          <td class="num">{{ dash(r.vat_rate) }}</td>
+          <td class="num">{{ dash(r.vat_sum) }}</td>
+          <td class="num">{{ dash(r.sum_with_vat) }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="13" class="empty">Строки не распознаны</td></tr>
+        {% endfor %}
+      </tbody>
+      {% if doc.rows %}
+      <tfoot>
+        <tr>
+          <th colspan="6">Итого</th>
+          <td class="num">{{ dash(doc.totals.qty) }}</td>
+          <td class="num">{{ dash(doc.totals.netto) }}</td>
+          <td></td>
+          <td class="num">{{ dash(doc.totals.sum_without_vat) }}</td>
+          <td></td>
+          <td></td>
+          <td class="num">{{ dash(doc.totals.sum_with_vat) }}</td>
+        </tr>
+      </tfoot>
+      {% endif %}
+    </table>
+  </div>
+  
+  <h2>Итоги</h2>
+  <table class="doc-table kv">
+    <tr><th>Количество</th><td class="num">{{ dash(doc.totals.qty) }}</td></tr>
+    <tr><th>Масса нетто</th><td class="num">{{ dash(doc.totals.netto) }}</td></tr>
+    <tr><th>Сумма без НДС</th><td class="num">{{ dash(doc.totals.sum_without_vat) }}</td></tr>
+    <tr><th>Сумма с НДС</th><td class="num">{{ dash(doc.totals.sum_with_vat) }}</td></tr>
+  </table>
 
-    <h3>Итоги</h3>
-    <ul>
-      <li>Количество: {{ doc.totals.qty or "—" }}</li>
-      <li>Масса нетто: {{ doc.totals.netto or "—" }}</li>
-      <li>Сумма без НДС: {{ doc.totals.sum_without_vat or "—" }}</li>
-      <li>Сумма с НДС: {{ doc.totals.sum_with_vat or "—" }}</li>
-    </ul>
-  </div>
-  <div>
-    <h2>JSON (редактируемый)</h2>
-    <textarea id="doc-json" rows="28">{{ doc_json }}</textarea>
-  </div>
+  <h2>Подписи</h2>
+  <table class="doc-table">
+    <thead>
+      <tr><th>Роль</th><th>Должность</th><th>ФИО</th></tr>
+    </thead>
+    <tbody>
+      {% for s in doc.signatures %}
+      <tr>
+        <td>{{ s.role }}</td>
+        <td>{{ dash(s.position) }}</td>
+        <td>{{ dash(s.fio) }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="3" class="empty">Подписи не распознаны</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
 </div>
 
 <form method="post" action="/preview/confirm">

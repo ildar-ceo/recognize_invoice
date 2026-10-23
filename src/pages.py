@@ -15,6 +15,14 @@ BASE_DIR = Path(__file__).resolve().parent
 router = APIRouter()
 templates = Jinja2Templates(directory=BASE_DIR / "templates")
 
+
+def dash(value) -> str:
+    """Пустое значение в шаблоне → «—» (не выдуманные данные)."""
+    return "—" if value is None or value == "" else str(value)
+
+
+templates.env.globals["dash"] = dash
+
 # Результат последнего распознавания (MVP-состояние в памяти)
 _last_result: Document | None = None
 
@@ -36,10 +44,7 @@ async def api_recognize(file: UploadFile = File(...)):
 async def preview(request: Request):
     if _last_result is None:
         return RedirectResponse("/", status_code=302)
-    doc_json = json.dumps(json.loads(_last_result.model_dump_json()),
-                          ensure_ascii=False, indent=2)
-    return templates.TemplateResponse(request, "preview.html",
-                                      {"doc": _last_result, "doc_json": doc_json})
+    return templates.TemplateResponse(request, "preview.html", {"doc": _last_result})
 
 
 @router.post("/preview/confirm")
