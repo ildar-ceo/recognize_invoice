@@ -1,20 +1,74 @@
-# Требование: система распознавания документов с интеграцией в 1С
+# Требование: система распознавания документов (MVP без интеграции с 1С)
 
 ## Общее описание
 
-Требование создать систему распознавания файлов, документов и интеграция с 1С. Это будет веб интерфейс на FastAPI + jinja шаблонизатор. На странице кнопка загрузить файл. Загружается картинка, она распознается через LLM. Затем информация из этой страницы отправляется в 1С через Api odata.
+Веб-интерфейс на **FastAPI + Jinja2** для распознавания сканов/фото документов через LLM.
+Пользователь загружает картинку → LLM определяет тип документа → вызывает типизированные tools →
+результат показывается на странице предпросмотра. Пользователь подтверждает/редактирует JSON.
 
-Также должна быть страница с настройками:
-- адрес 1С, логин и пароль
-- LLM: название модели, url api, пароль.
+**MVP не подключается к 1С** — интеграция через OData будет добавлена позже как отдельный шаг.
+
+## Структура проекта (MVP)
+
+Минимально необходимый набор файлов:
+
+```
+.
+├── AGENTS.md                     # инструкции для AI-агентов
+├── README.md                     # краткое описание проекта
+├── .env.example                  # шаблон переменных окружения (без секретов)
+├── docs/
+│   └── task.md                   # этот файл: требования, схема JSON, tools, этапы
+└── src/
+    ├── main.py                   # точка входа: FastAPI app, маршруты, запуск uvicorn
+    ├── config.py                 # чтение настроек из env (.env): MODEL_NAME, MODEL_KEY, MODEL_URL
+    ├── recognition.py            # логика распознавания: агент LLM, tools, сборка JSON
+    ├── schemas.py                # Pydantic-схемы: DocType, Header, Row, Totals, Document
+    ├── pages.py                  # маршруты страниц: загрузка, предпросмотр, настройки
+    ├── assets/
+    │   ├── style.css             # стили
+    │   └── upload.js             # загрузка файла (FormData → API)
+    └── templates/
+        ├── base.html             # базовый layout (head, навигация)
+        ├── index.html            # страница загрузки
+        ├── preview.html          # страница предпросмотра JSON
+        └── settings.html         # страница настроек (LLM; 1С — заглушка)
+```
+
+### Назначение файлов
+
+| Файл | Ответственность |
+|---|---|
+| `src/main.py` | Создаёт `FastAPI`, подключает `pages.py`, статику `assets/`, отдаёт `templates/` через Jinja2 |
+| `src/config.py` | `pydantic-settings`: читает `MODEL_NAME`, `MODEL_KEY`, `MODEL_URL` из env/`.env` |
+| `src/schemas.py` | Модели документа (Pydantic v2) — единый контракт между tools, JSON и UI |
+| `src/recognition.py` | Паттерн **Strategy**: реестр `doc_type → tools`. Шаг 1 — `set_doc_type`, шаг 2 — набор tools по типу. Сборка `Document` из вызовов |
+| `src/pages.py` | Роуты: `GET /` (upload), `POST /api/recognize` (LLM), `GET /preview` (JSON), `GET/POST /settings` |
+| `src/templates/*` | Jinja2-шаблоны страниц |
+| `src/assets/*` | CSS и JS для загрузки файла |
+
+> Интеграция с 1С (OData) будет отдельным модулем `src/one_c.py` — **не входит в MVP**.
 
 ## Принцип распознавания
 
-Будут распознаваться разные документы, поэтому первое нужно определить тип документа, затем для этого документа собрать список tools. Когда распознается картинка вызывается этот список tools. Например `add_row(название, код, товар, кол-во, цена)`. LLM должна прочитать картинку и вызывать эти tools. После этого вернуть результат в JSON.
+Распознаются разные документы, поэтому:
+1. Отдельный лёгкий прогон LLM с minimal tool `set_doc_type(doc_type)` — определяет тип.
+2. По типу из реестра берётся набор tools (например, для ТОРГ-12: `set_header`, `add_row`, `set_total`, `set_signature`).
+3. Повторный прогон LLM с картинкой и этим набором tools — «заполнение» документа.
+4. Из вызовов tools собирается итоговый JSON (схема ниже).
+5. Пользователь проверяет на странице предпросмотра и подтверждает.
+
+## Переменные окружения (`.env`)
+
+```
+MODEL_NAME=...    # название модели
+MODEL_KEY=...     # API-ключ
+MODEL_URL=...     # URL API
+```
 
 ## Разбор документов (по примерам из images/)
 
-В примерах `images/image1.png` и `images/image2.png` — **товарная накладная**, унифицированная форма № ТОРГ-12 (утверждена постановлением Госкомстата России от 25.12.98 № 132), код формы по ОКУД **0330212**. Обе картинки — вариант «Страница 1».
+В примерах `images/image1.png` и `images/image2.png` — **товарная накладная**
 
 ### Шапка документа (структурированные поля)
 
@@ -71,11 +125,11 @@
 - Суммы имеют формат `руб.коп` через запятую (`780,00`) — нормализовать к Decimal.
 - Встречаются суммы прописью («Пятьдесят пять тысяч тенге 00 тиын») — сохранять и сверять с числовой суммой.
 
-## Предлагаемая схема JSON для ТОРГ-12
+## Предлагаемая схема JSON
 
 ```json
 {
-  "doc_type": "torg12",
+  "doc_type": "custom",
   "header": {
     "form_code": "0330212",
     "number": "ПР-90",
@@ -114,65 +168,60 @@
 ```
 
 Соответствующие tools (вызываются LLM при распознавании):
+- `set_doc_type(doc_type)` — определение типа документа (первый прогон)
 - `set_header(field, value)` — поля шапки
 - `add_row(name, code, unit, qty, price, ...)` — строка таблицы
 - `set_total(field, value)` — итоги
 - `set_signature(role, fio, position)` — подписи
 
-## Этапы обработки
+## Этапы обработки (MVP)
 
-1. Загрузка изображения на странице.
-2. Определение типа документа (LLM с trivial tools, например `set_doc_type`).
-3. Выбор набора tools по типу документа и повторный прогон LLM с картинкой + этими tools.
-4. Сборка JSON-результата из вызовов tools.
-5. Предпросмотр распознанного на странице и подтверждение пользователем.
-6. Отправка данных в 1С через OData API (адрес, логин, пароль из настроек).
+1. Загрузка изображения на странице (`POST /` или fetch → `POST /api/recognize`).
+2. Определение типа документа (LLM + `set_doc_type`).
+3. Выбор набора tools по типу и повторный прогон LLM с картинкой + этими tools.
+4. Сборка JSON-результата из вызовов tools, валидация через Pydantic.
+5. Предпросмотр распознанного на странице `/preview` и подтверждение пользователем.
 
-## Пример загрузки картинки в LLM
+*(Этап 6 — отправка в 1С через OData — после MVP.)*
+
+## Пример загрузки картинки в LLM (pydantic-ai)
 
 ```python
-from pydantic_ai import Agent, ImageUrl, RunContext
+from pydantic_ai import Agent, RunContext
 from pydantic_ai.capabilities import AbstractCapability
+from pydantic_ai.messages import BinaryContent
 
 
-class Recognize():
-
+class Recognize:
     def __init__(self):
         self.lines = []
 
     def add(self, name, value):
-        self.lines.append({
-            "name": name,
-            "value": value,
-        })
+        self.lines.append({"name": name, "value": value})
 
 
 def tool_example(ctx: RunContext, name: str, value: str):
     ctx.deps.add(name, value)
-    return "Message"
+    return "OK"
 
 
 class Parser(AbstractCapability):
-
+    @staticmethod
     def get_toolset():
         return FunctionToolset(tools=[tool_example])
 
 
 def build_agent(name, capabilities):
-    agent = Agent(
-        name,
-        capabilities=capabilities
-    )
-    return agent
+    return Agent(name, capabilities=capabilities)
 
 
-async def run(agent, image):
+async def run(agent, image: bytes, user_message: str):
     result = await agent.run(
         [
             user_message,
-            BinaryContent(data=image_response.content, media_type='image/png')
+            BinaryContent(data=image, media_type="image/png"),
         ],
-        deps=Recognize()
+        deps=Recognize(),
     )
     return result.output
 ```
