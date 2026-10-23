@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <template>
-	<uid>com.floorplan_recognition</uid>
-	<name>Floorplan Recognition</name>
+	<uid>com.invoice_recognition</uid>
+	<name>Invoice Recognition</name>
 	<version>1.0</version>
 	<yaml>
 		<services>

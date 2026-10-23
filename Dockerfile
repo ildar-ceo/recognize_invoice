@@ -5,16 +5,14 @@ FROM python:3.12-slim
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1
 
-WORKDIR /app
-
 # Сначала только зависимости — чтобы слой кешировался
-COPY src/requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+COPY src/requirements.txt /app/requirements.txt
+RUN pip install --no-cache-dir -r /app/requirements.txt
 
 # Код приложения
-COPY src/ ./src/
+COPY src/ /app
 
 EXPOSE 8000
 
 # Приложение должно слушать 0.0.0.0, а не 127.0.0.1
-CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["python3", "-m", "app.main"]

@@ -1,6 +1,6 @@
 """Распознавание документов: агент LLM, tools, сборка Document (паттерн Strategy)."""
 from pydantic_ai import Agent, FunctionToolset, RunContext
-from pydantic_ai.capabilities import AbstractCapability
+from pydantic_ai.capabilities import AbstractCapability, Caching
 from pydantic_ai.messages import BinaryContent
 
 from .config import settings
@@ -125,12 +125,9 @@ FILL_PROMPT = (
 )
 
 def build_model():
+    from pydantic_ai.models.openai import OpenAIResponsesModel
     from pydantic_ai.providers.openai import OpenAIProvider
-    try:
-        from pydantic_ai import OpenAIChatModel as _OpenAIModel
-    except ImportError:  # старые версии pydantic-ai
-        from pydantic_ai.models.openai import OpenAIModel as _OpenAIModel
-    return _OpenAIModel(
+    return OpenAIResponsesModel(
         settings.model_name,
         provider=OpenAIProvider(
             base_url=settings.model_url,
@@ -152,7 +149,7 @@ async def recognize(image: bytes, media_type: str = "image/png") -> Document:
     # Шаг 1: лёгкий прогон — определение типа
     rec = Recorder()
     detector = Agent(model, name="Определение типа",
-                     capabilities=[TypeDetector()], deps_type=Recorder)
+                     capabilities=[Caching(), TypeDetector()], deps_type=Recorder)
     await detector.run(
         ["Определи тип документа на картинке и вызови set_doc_type."] + content,
         deps=rec,
@@ -161,7 +158,7 @@ async def recognize(image: bytes, media_type: str = "image/png") -> Document:
 
     # Шаг 2: повторный прогон с набором tools по типу (Strategy)
     filler = Agent(model, name="Заполнение документа",
-                   capabilities=[TOOLSETS[doc_type]], deps_type=Recorder)
+                   capabilities=[Caching(), TOOLSETS[doc_type]], deps_type=Recorder)
     await filler.run([FILL_PROMPT] + content, deps=rec)
 
     return rec.build()
