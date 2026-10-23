@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<template>
+	<uid>com.floorplan_recognition</uid>
+	<name>Floorplan Recognition</name>
+	<version>1.0</version>
+	<yaml>
+		<services>
+			<_var_app_name_>
+				<image>invoice-recognition:latest</image>
+				<hostname>{{.Service.Name}}.{{.Task.ID}}.local</hostname>
+				<environment>
+					<MODEL_NAME>_var_model_name_</MODEL_NAME>
+					<MODEL_KEY>_var_model_key_</MODEL_KEY>
+                    <MODEL_URL>_var_model_url_</MODEL_URL>
+				</environment>
+				<volumes>_var_app_name_:/data</volumes>
+			</_var_app_name_>
+		</services>
+		<volumes>
+			<_var_app_name_ />
+		</volumes>
+	</yaml>
+	<variables>
+		<variable>
+			<name>_var_model_name_</name>
+			<label>Model name</label>
+			<type>string</type>
+			<default></default>
+		</variable>
+		<variable>
+			<name>_var_model_key_</name>
+			<label>Model key</label>
+			<type>string</type>
+			<default></default>
+		</variable>
+        <variable>
+			<name>_var_model_url_</name>
+			<label>Model url</label>
+			<type>string</type>
+			<default></default>
+		</variable>
+	</variables>
+	<modificators>
+		<li>org.bayrell.modificator.cloud_os</li>
+		<li>org.bayrell.modificator.deploy_hostname</li>
+	</modificators>
+	<patch>
+		<name>Template patch</name>
+		<operations>
+		</operations>
+	</patch>
+</template>

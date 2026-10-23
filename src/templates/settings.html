@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Настройки</h1>
+{% if saved %}<p class="ok">Сохранено ✔</p>{% endif %}
+
+<form method="post" class="settings-form">
+  <h2>LLM</h2>
+  <label>Название модели
+    <input name="model_name" value="{{ s.model_name }}" placeholder="gpt-4o-mini">
+  </label>
+  <label>URL API
+    <input name="model_url" value="{{ s.model_url }}" placeholder="https://api.example.com/v1">
+  </label>
+  <label>API-ключ
+    <input name="model_key" type="password" value="{{ s.model_key }}">
+  </label>
+
+  <h2>1С <small>(после MVP)</small></h2>
+  <label>Адрес 1С (OData)
+    <input disabled placeholder="http://1c.example.com/erp/hs">
+  </label>
+
+  <button type="submit" class="primary">Сохранить</button>
+</form>
+{% endblock %}

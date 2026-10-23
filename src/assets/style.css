@@ -1,0 +1,81 @@
+:root {
+  --accent: #2563eb;
+  --bg: #f6f8fb;
+  --border: #d9dee7;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  background: var(--bg);
+  color: #1c2430;
+}
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #fff;
+  border-bottom: 1px solid var(--border);
+  padding: 12px 24px;
+}
+.topbar .logo { font-weight: 600; }
+.topbar nav a {
+  color: var(--accent);
+  text-decoration: none;
+  margin-left: 18px;
+}
+main { max-width: 1100px; margin: 24px auto; padding: 0 16px; }
+h1 { font-size: 1.5rem; }
+
+.upload-box {
+  background: #fff;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 480px;
+}
+button {
+  border: 1px solid var(--border);
+  background: #fff;
+  border-radius: 6px;
+  padding: 8px 16px;
+  cursor: pointer;
+}
+button.primary, .upload-box button {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+button:disabled { opacity: .6; cursor: wait; }
+.status { min-height: 1.2em; font-size: .9rem; color: #556; }
+.status.error { color: #c0392b; }
+
+.preview-grid {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr;
+  gap: 24px;
+  align-items: start;
+}
+textarea {
+  width: 100%;
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: .85rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px;
+}
+.settings-form label { display: block; margin: 10px 0; }
+.settings-form input {
+  display: block;
+  width: 100%;
+  max-width: 480px;
+  padding: 8px;
+  margin-top: 4px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+.settings-form h2 small { color: #889; font-weight: 400; }
+.ok { color: #1a8a3c; font-weight: 600; }

@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Загрузка документа</h1>
+<p>Загрузите скан или фото документа (PNG/JPG). LLM определит тип и заполнит JSON.</p>
+
+<div class="upload-box">
+  <input type="file" id="file" accept="image/png,image/jpeg,image/webp">
+  <button id="upload-btn">Распознать</button>
+  <div id="status" class="status"></div>
+</div>
+
+<script src="/assets/upload.js"></script>
+{% endblock %}

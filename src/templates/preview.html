@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Предпросмотр результата</h1>
+<p>Проверьте распознанный JSON и подтвердите.</p>
+
+<div class="preview-grid">
+  <div>
+    <h2>Структура</h2>
+    <p><b>Тип:</b> {{ doc.doc_type.value }}</p>
+    <p><b>Номер:</b> {{ doc.header.number or "—" }} &nbsp; <b>Дата:</b> {{ doc.header.date or "—" }}</p>
+    <p><b>Строк:</b> {{ doc.rows|length }}</p>
+
+    <h3>Итоги</h3>
+    <ul>
+      <li>Количество: {{ doc.totals.qty or "—" }}</li>
+      <li>Масса нетто: {{ doc.totals.netto or "—" }}</li>
+      <li>Сумма без НДС: {{ doc.totals.sum_without_vat or "—" }}</li>
+      <li>Сумма с НДС: {{ doc.totals.sum_with_vat or "—" }}</li>
+    </ul>
+  </div>
+  <div>
+    <h2>JSON (редактируемый)</h2>
+    <textarea id="doc-json" rows="28">{{ doc_json }}</textarea>
+  </div>
+</div>
+
+<form method="post" action="/preview/confirm">
+  <button type="submit" class="primary">Подтвердить</button>
+</form>
+{% endblock %}
